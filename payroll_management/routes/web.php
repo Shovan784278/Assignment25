@@ -1,121 +1,92 @@
 <?php
 
-/*application configration routes*/
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\LeaveController;
+use App\Http\Middleware\ManagerMiddleware;
+use App\Http\Controllers\ManagerController;
+use App\Http\Controllers\LeaveCategoryController;
+use App\Http\Controllers\LeaveReportController;
+use App\Http\Middleware\TokenVerificationMiddleware;
+use GuzzleHttp\Middleware;
+use Illuminate\Database\Capsule\Manager;
+
 /*
-Route::group(['prefix'=>'clear'],function(){
-	Route::get('cache', function () {
-	    \Artisan::call('cache:clear');
-	    dd("Cache is cleared");
-	});
-	Route::get('view', function () {
-	    \Artisan::call('view:clear');
-	    dd("View is cleared");
-	});
-	Route::get('route', function () {
-		\Artisan::call('route:clear');
-		dd("route is cleared");
-	});
-	Route::get('event', function () {
-		\Artisan::call('event:clear');
-		dd("Events is cleared");
-	});
-});
-
-Route::get('config-cache', function () {
-	\Artisan::call('config:cache');
-	dd("Config is cached.");
-});
-
-Route::get('storage-link', function () {
-	\Artisan::call('storage:link');
-	dd("Storage link successfully.");
-});
-
-Route::get('sym-storage-link', function () {
-	$targetFolder = $_SERVER['DOCUMENT_ROOT'].'/storage/app/public';
-	$linkFolder = $_SERVER['DOCUMENT_ROOT'].'/public/storage';
-	symlink($targetFolder,$linkFolder);
-	dd('Symlink process successfully completed');
-});
-
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register web routes for your application. These
+| routes are loaded by the RouteServiceProvider and all of them will
+| be assigned to the "web" middleware group. Make something great!
+|
 */
-/* end of application configration routes*/
-Route::get('/','Admin\DashboardController@dashboard')->middleware('RedirectWhenNotLogin')->name('dash');
 
-// checkin routes
-Route::get('/checkin',"Admin\CheckInController@checkin")->name('admin.checkin.index');
-Route::post('/checkin',"Admin\CheckInController@store")->name('admin.checkin.store');
-Route::put('/checkin',"Admin\CheckInController@update")->name('admin.checkin.update');
-
-Route::group(['namespace'=>'Admin','as'=>'admin.'],function(){
-	
-	Route::group(['namespace'=>'Auth'],function(){
-		Route::get('/login','AuthController@showLogin')->name('showLogin');
-		Route::post('/login','AuthController@login')->name('login');
-	});
-
-	Route::group(['middleware'=>'auth'],function(){
-		Route::post("/logout",'Auth\AuthController@logout')->name('logout');
-
-		// media related routes
-		Route::post('/media', 'HelperController@storeMedia')->name('storeMedia');
-		Route::get('/media/showMediaFromTempFolder/{name}', 'HelperController@showMediaFromTempFolder')->name('showMediaFromTempFolder');
-		Route::post('/media/base64EncodedData', 'HelperController@storeMediaBase64')->name('storeMediaBase64');
-		Route::post('/media/removeMediaFromTempFolder/{name}', 'HelperController@removeMediaFromTempFolder')->name('removeMediaFromTempFolder');
-		Route::post('/media/removeMedia/{model}/{model_id}/{collection}', 'HelperController@removeMedia')->name('removeMedia');
-		Route::post('/confirm/password', 'HelperController@confirmPassword')->name('confirmPassword');
-
-		// Dashboard Routes
-		Route::get("/dashboard",'DashboardController@dashboard')->name('dashboard');
-		
-		//admin profile route
-		Route::get("/profile","ProfileController@index")->name('profile.index');
-		Route::post("/profile","ProfileController@update")->name('profile.update');
-
-		//position routes
-		Route::resource('position','PositionController');
-		Route::post('getdata/position',"PositionController@getData")->name('position.getData');
-		Route::post('all-delete/position/',"PositionController@massDelete")->name('position.massDelete');
-
-		//deduction routes
-		Route::resource('deduction','DeductionController');
-		Route::post('getdata/deduction',"DeductionController@getData")->name('deduction.getData');
-		Route::post('all-delete/deduction/',"DeductionController@massDelete")->name('deduction.massDelete');
-
-		//schedule routes
-		Route::resource('schedule','ScheduleController');
-		Route::post('getdata/schedule',"ScheduleController@getData")->name('schedule.getData');
-		Route::post('all-delete/schedule/',"ScheduleController@massDelete")->name('schedule.massDelete');
-
-		//employee routes
-		Route::resource('employee','EmployeeController');
-		Route::post('getdata/employee',"EmployeeController@getData")->name('employee.getData');
-		Route::post('get-employees-data',"EmployeeController@getDataTable")->name('employee.getDataTable');
-		Route::post('all-delete/employee/',"EmployeeController@massDelete")->name('employee.massDelete');
-
-		//overtime routes
-		Route::resource('overtime','OvertimeController');
-		Route::post('getdata/overtime',"OvertimeController@getData")->name('overtime.getData');
-		Route::post('get-overtime-data',"OvertimeController@getDataTable")->name('overtime.getDataTable');
-		Route::post('all-delete/overtime/',"OvertimeController@massDelete")->name('overtime.massDelete');
-
-		//cashadvance routes
-		Route::resource('cashadvance','CashAdvanceController');
-		Route::post('getdata/cashadvance',"CashAdvanceController@getData")->name('cashadvance.getData');
-		Route::post('get-cashadvance-data',"CashAdvanceController@getDataTable")->name('cashadvance.getDataTable');
-		Route::post('all-delete/cashadvance/',"CashAdvanceController@massDelete")->name('cashadvance.massDelete');
-
-		//attendance routes
-		Route::resource('attendance','AttendanceController');
-		Route::post('getdata/attendance',"AttendanceController@getData")->name('attendance.getData');
-		Route::post('get-attendance-data',"AttendanceController@getDataTable")->name('attendance.getDataTable');
-		Route::post('all-delete/attendance/',"AttendanceController@massDelete")->name('attendance.massDelete');
-
-		//payroll routes
-		Route::get('payroll',"PayrollController@index")->name('payroll.index');
-		Route::post('getdata/payroll',"PayrollController@getData")->name('payroll.getData');
-		Route::post('get-payroll-data',"PayrollController@getDataTable")->name('payroll.getDataTable');
-		Route::post('payroll/download-payroll',"PayrollController@payrollExportPDF")->name('payroll.payrollExportPDF');
-		Route::post('payroll/download-payslip',"PayrollController@payslipExportPDF")->name('payroll.payslipExportPDF');
-	});
+Route::get('/', function () {
+    return view('welcome');
 });
+
+// Page Route
+Route::get('/userLogin', [UserController::class, 'userLoginPage']);
+Route::get('/userRegistration', [UserController::class, 'userRegistrationPage']);
+Route::get('/sendOTP', [UserController::class, 'sendOTPPage']);
+Route::get('/verifyOtp', [UserController::class, 'OTPVerificationPage']);
+
+Route::get('/resetPassword', [UserController::class, 'resetPasswordPage'])->middleware([TokenVerificationMiddleware::class]);
+
+// Dashboard page Route
+Route::get('/dashboard', [UserController::class, 'dashboardPage'])->middleware([TokenVerificationMiddleware::class]);
+
+// User Profile page
+Route::get('/userProfile', [UserController::class, 'userProfilePage'])->middleware([TokenVerificationMiddleware::class]);
+
+
+// Loagout Page Route
+Route::get('/logout', [UserController::class, 'userLogout']);
+
+Route::get('/leaveRequestPage', [LeaveController::class, 'leaveRequestPage'])->middleware([TokenVerificationMiddleware::class]);
+Route::get('/allLeaveRequest', [LeaveController::class, 'allLeaveRequestShow'])->middleware([TokenVerificationMiddleware::class]);
+
+// Leave report page
+// Route::get('/eployeeLeaveReport', [LeaveController::class, 'eployeeLeaveReportShow'])->middleware([TokenVerificationMiddleware::class]);
+Route::get('/eployeeLeaveReport',[LeaveReportController::class, 'eployeeLeaveReportShow'])->middleware([TokenVerificationMiddleware::class]);
+
+
+
+
+// Authentication Ajux API Route
+Route::post('/user-register', [UserController::class, 'userRegistration']);
+Route::post('/user-login', [UserController::class, 'userLoggingIn']);
+Route::post('/send-otp', [UserController::class, 'sendOTPCode']);
+Route::post('/otp-verify', [UserController::class, 'OTPVerification']);
+Route::get('/all-user-list', [UserController::class, 'showAllUserList']);
+
+Route::post('/password-reset', [UserController::class, 'resetPassword'])->middleware([TokenVerificationMiddleware::class]);
+Route::get('/user-profile-info', [UserController::class, 'getUserProfileInfo'])->middleware([TokenVerificationMiddleware::class]);
+Route::post('/user-profile-info-update', [UserController::class, 'userProfileInfoUpdating'])->middleware([TokenVerificationMiddleware::class]);
+
+// Leave Category Ajux API Route
+Route::get('/leave-category-list', [LeaveCategoryController::class, 'showLeaveCategoryList'])->middleware([TokenVerificationMiddleware::class]);
+Route::post('/leave-category-create', [LeaveCategoryController::class, 'leaveCategoryCreation'])->middleware([TokenVerificationMiddleware::class]);
+Route::post('/leave-category-update', [LeaveCategoryController::class, 'leaveCategoryUpdating'])->middleware([TokenVerificationMiddleware::class]);
+Route::post('/leave-category-delete', [LeaveCategoryController::class, 'leaveCategoryDeleting'])->middleware([TokenVerificationMiddleware::class]);
+
+// Leave Ajux API Route
+Route::get('/leave-list', [LeaveController::class, 'displayLeaveList'])->middleware([TokenVerificationMiddleware::class]);
+Route::post('/leave-create', [LeaveController::class, 'leaveCreation'])->middleware([TokenVerificationMiddleware::class]);
+
+
+
+// Leave update Ajux API Route
+Route::post('/leave-update', [ManagerController::class, 'leaveUpdateByManager'])->middleware([ManagerMiddleware::class]);
+Route::get('/managerPage', [ManagerController::class, 'managerPageShow'])->middleware([ManagerMiddleware::class]);
+Route::get('/leave-list-manager', [ManagerController::class, 'leaveListForManager'])->middleware([ManagerMiddleware::class]);
+Route::post('/leave-by-id', [ManagerController::class, 'showLeaveById'])->middleware([ManagerMiddleware::class]);
+
+
+
+// Route::get('/sabujLeave', [LeaveController::class, 'sabujLeave'])->middleware([TokenVerificationMiddleware::class]);
+
+
+Route::get('/available-leave-days', [LeaveReportController::class, 'calculateAvailableLeaveDays'])->middleware([TokenVerificationMiddleware::class]);
+

@@ -2,229 +2,231 @@
 
 namespace App\Http\Controllers;
 
-use App\Helper\JWTToken;
-use App\Mail\OTPMail;
-use App\Models\User;
 use Exception;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
+use App\Models\User;
+use App\Models\Leave;
+use App\Helper\JWTToken;
+use App\Models\LeaveCategory;
 use Illuminate\View\View;
+use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
-
-  //For page view
-
-  function LoginPage():View{
-
-    return view('pages.auth.login');
-}
-
-function RegistrationPage():View{
-
-    return view('pages.auth.registration');
-}
-
-function SendOTP():View{
-
-    return view('pages.auth.send-otp-page');
-}
-
-function ResetPass():View{
-
-    return view('pages.auth.reset-password-page');
-}
-
-function VerifyOTPPage():View{
-
-    return view('pages.auth.verify-otp-page');
-}
-
-
-function ProfilePage(){
-
-    return view('pages.dashboard.profile-page');
-}
-
-
-
-
-    
-    public function UserRegistration(Request $request){
-
+    function userRegistration(Request $request){
         try{
-
-            User::create([
-
-                'firstName' => $request-> input('firstName'),
-                'lastName' => $request-> input('lastName'),
-                'email' => $request-> input('email'),
-                'mobile' => $request-> input('mobile'),
-                'password' => $request-> input('password'),
-                'otp' => $request-> input('otp')
-                
-            ]);
-    
-            return response()->json([
-    
-                "status"=>"success",
-                "message"=>"Registration Successful!"
-    
-            ]);
-            
-        }catch(Exception $e){
+            User::create($request->input());
 
             return response()->json([
-    
-                "status"=>"failed",
-                "message"=>"Registration failed!"
-    
+                'status'=>'success',
+                'message'=>'You have been registered successfully'
             ]);
-
-
         }
-
-        
-
-    }
-
-
-    function UserLogin(Request $request){
-
-        $count = User::where('email','=',$request->input('email'))
-            ->where('password','=',$request->input('password'))
-            ->select('id')->first();
-
-
-        if($count!==null){
-
-            $token = JWTToken::CreateToken($request->input('email'), $count->id);
-
+        catch(Exception $e){
             return response()->json([
-    
-                "status"=>"success",
-                "message"=>"User Login Successfully!",
-                
-            ],status:200)->cookie('token', $token, 60*24*30);
-
-
-        }else{
-
-            return response()->json([
-    
-                "status"=>"failed",
-                "message"=>"Unothorized"
-                
-            ],status:201);
-
+                'status'=>'fail',
+                'message'=>'You are fail to register'
+            ]);
         }
     }
 
 
-    public function SendOTPCode(Request $request){
-
+    function userLoggingIn(Request $request){
         $email = $request->input('email');
-        $otp = rand(1000,9999);
+        $password = $request->input('password');
 
-       $count =  User::where('email','=', $email)->count();
+        $count = User::where('email', '=', $email)->where('password', '=', $password)->first();
 
-       if($count == 1){
-
-            //OTP email ADDRESS
-            Mail::to($email)->send(new OTPMail($otp));
-            
-            //OTP database table update
-            User::where('email','=',$email)->update(['otp'=>$otp]);
+        if($count !== null){
+            $token = JWTToken::createToken($email, $count->id, $count->role);
 
             return response()->json([
-    
-                "status"=>"success",
-                "message"=>"4-Digit OTP has been sent to your Email"
-    
-            ],status:200);
+                'status'=>'success',
+                'message'=>'You have been logged in successfully',
+                'token'=>$token
+            ])->cookie('token', $token, 60*24*30);
+        }else{
+            return response()->json([
+                'status'=>'fail',
+                'message'=>'Unauthorized user'
+            ]);
+        }
 
-       }else{
+    }
+
+
+    function sendOTPCode(Request $request){
+        $email = $request->input('email');
+        $otp = rand(1000, 9999);
+
+        $count = User::where('email', '=', $email)->count();
+
+        if($count == 1){
+            // Send OTP code to user Email
+            // Mail::to($email)->send(new OTPMail($otp));
+
+            // Update Otp code in database
+            User::where('email', '=', $email)->update(['otp'=>$otp]);
+
+            return response()->json([
+                'status'=>'success',
+                'message'=>'4 Digit OTP code has been sent to your email'
+            ]);
+        }else{
+            return response()->json([
+                'status'=>'Failed',
+                'message'=>'Unauthorized from UserController'
+            ]);
+
+        }
+    }
+
+
+    function OTPVerification(Request $request){
+        $email = $request->input('email');
+        $otp = $request->input('otp');
+
+        $count = User::where('email', '=', $email)->where('otp', '=', $otp)->count();
+
+        if($count === 1){
+            //OTP update
+            User::where('email', '=', $email)->update(['otp'=>'1']);
+
+            // New token create for reset password
+            $token = JWTToken::createTokenForResetPassword($email);
+
+            return response()->json([
+                'status'=>'success',
+                'message'=>'OTP has been varified Successfully',
+                'token'=>$token
+            ])->cookie('token', $token, 60*24*30);
+        }else{
+            return response()->json([
+                'status'=>'Failed',
+                'message'=>'Unauthorized to varified OTP from Controller',
+            ]);
+        }
+    }
+
+
+    function resetPassword(Request $request){
+        try{
+            $email = $request->header('email');
+           //$id = $request->header('id');
+            $password = $request->input('password');
+
+            User::where('email', '=', $email)
+           // ->where('id', '=', $id)
+            ->update(['password'=>$password]);
+
+            return response()->json([
+                'status'=>'Success',
+                'message'=>'Password has been reset Successfully'
+            ]);
+        }
+        catch(Exception $error){
+            return response()->json([
+                'status'=>'Fail',
+                'message'=>'Something went wrong'
+            ]);
+        }
+    }
+
+
+    function showAllUserList(Request $request){
+        return User::all();
+    }
+
+
+
+    function getUserProfileInfo(Request $request){
+        $email = $request->header('email');
+        $data = User::where('email', '=', $email)->first();
 
         return response()->json([
-    
-            "status"=>"failed",
-            "message"=>"OTP not sent"
+            'status'=>'Success',
+            'message'=>'Request successful',
+            'data'=>$data
+        ]);
+    }
 
-        ],status:401);
 
+    function userProfileInfoUpdating(Request $request){
+       try{
+            $email = $request->header('email');
+
+            User::where('email', '=', $email)->update([
+                'name'=>$request->input('name'),
+                'phone'=>$request->input('phone'),
+                'password'=>$request->input('password'),
+                'role'=>$request->input('role'),
+            ]);
+
+            return response()->json([
+                'status'=>'success',
+                'message'=>'You profile has been updated successfully',
+            ]);
+       }
+       catch(Exception $e){
+            return response()->json([
+                'status'=>'fail',
+                'message'=>'Request fail to update',
+            ]);
        }
 
     }
 
 
-    public function VerifyOTP(Request $request){
 
-        $email = $request->input('email');
-        $otp = $request->input('otp');
-
-        $count = User::where('email','=',$email)->where('otp','=',$otp)->count();
-
-        if($count==1){
-
-            //Database OTP Update for reset
-            User::where('email','=',$email)->update(['otp'=>'0']);
-
-            //Token issue for reset password
-            $token = JWTToken::CreateTokenForResetPassword($request->input('email'));
-
-            return response()->json([
+    // Dashboard page Routing
+    function dashboardPage():View{
+        return view('pages.dashboard.dashboard-page');
+    }
     
-                "status"=>"success",
-                "message"=>"OTP Verification has successful",
-                "token"=>$token
-            ]);
-
-        }else{
-
-            return response()->json([
-    
-            "status"=>"failed",
-            "message"=>"OTP not sent"
-
-        ],status:401);
-            
-        }
-
-
+    // logout  Routing
+    function userLogout(Request $request){
+        return redirect('/userLogin')->cookie('token', '', -1);
     }
 
-    public function ResetPassword(Request $request){
-
-        try{
-
-        $email = $request->header('email');
-        $password = $request->input('password');
-
-        //Reset Password Update In database
-        User::where('email','=',$email)->update(['password'=>$password]);
-
-        return response()->json([
-    
-            "status"=>"successful",
-            "message"=>"Password reset Successfully!"
-            
-        ],status:200);
-
-
-        }catch(Exception $exeption){
-            
-            return response()->json([
-    
-                "status"=>"Failed!",
-                "message"=>"Something Went Wrong",
-                
-            ],status:401);
-
-        }
-
-        
-
-
+    // Page Routing
+    function userLoginPage():View{
+        return view('pages.auth.login-page');
     }
+
+    function userRegistrationPage():View{
+        return view('pages.auth.register-page');
+    }
+
+    function sendOTPPage():View{
+        return view('pages.auth.send-otp-page');
+    }
+
+    function OTPVerificationPage():View{
+        return view('pages.auth.otp-verify-page');
+    }
+
+    function resetPasswordPage():View{
+        return view('pages.auth.password-reset-page');
+    }
+
+    function userProfilePage():View{
+        return view('pages.dashboard.user-profile-page');
+    }
+
+
+    
+
+
+    function allLeavesRequest(Request $request){
+        return Leave::with('user', 'leaveCategory')->get();
+    }
+
+    
+    
+
+    
+
+
+
+
 
 }

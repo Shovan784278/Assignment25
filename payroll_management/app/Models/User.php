@@ -7,16 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class User extends Model
 {
-    protected $fillable = ['firstName','lastName','email','mobile','password']; 
+    use HasFactory;
+    protected $fillable = ['name', 'email', 'phone', 'password', 'role', 'otp', 'available_leave'];
+    protected $attributes = ['otp'=>'0', 'available_leave'=>'30'];
 
-    protected $attributes = [
-
-        'otp' => '0'
-
-    ];
-
-    public function events()
-{
-    return $this->hasMany(Event::class);
-}
+    public function leave(){
+        return $this->hasMany(Leave::class);
+    }
 }
